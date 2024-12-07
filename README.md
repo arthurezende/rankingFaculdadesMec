@@ -6,6 +6,14 @@ Este projeto visa desenvolver uma ferramenta interativa para auxiliar estudantes
 
 Teste: https://rankingfaculdadesmec-appteste.streamlit.app/
 
+## Membros do Projeto
+
+- Arthur D. Rezende
+- Flavia G. Perpetuo
+- Marcos Rogerio
+- Tatiana Popp
+- Victoria S. Muñoz
+
 ## Funcionalidades
 
 - Visualização de rankings de instituições de ensino superior
@@ -36,4 +44,14 @@ O projeto utiliza dados públicos disponibilizados pelo INEP e MEC, incluindo:
 
 ## Estrutura do Projeto
 
-- `app.py`: Arquivo pri
+- `app.py`: Arquivo principal do aplicativo Streamlit
+- `dados_reduzidos_50_mil_linhas-uf.csv`: Amostra do dataset do MEC combinado com informações de IES e cursos
+- `requirements.txt`: Lista de dependências do projeto
+
+## Contribuições
+
+Contribuições são bem-vindas! Por favor, leia as diretrizes de contribuição antes de submeter pull requests.
+
+## Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
