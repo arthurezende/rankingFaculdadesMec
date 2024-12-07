@@ -18,7 +18,7 @@ st.markdown(
 
 @st.cache_data(ttl=4600)
 def load_data():
-    df = pd.read_csv('dados_reduzidos.csv', encoding='utf-8', low_memory=False)
+    df = pd.read_csv('dados_reduzidos_100_mil_linhas.csv', encoding='utf-8', low_memory=False)
     for col in ['CI', 'CI-EaD', 'IGC', 'CC', 'CPC', 'ENADE', 'IDD']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
     df['TP_REDE'] = df['TP_REDE'].map({1: 'Pública', 2: 'Privada'})
