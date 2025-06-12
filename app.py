@@ -36,58 +36,59 @@ with st.expander("ℹ️ Entenda os Critérios de Avaliação (IGC, CPC, ENADE)"
 
 @st.cache_resource
 def get_db_connection():
-    # Usamos uma conexão em memória do DuckDB para máxima velocidade.
     return duckdb.connect(database=':memory:', read_only=False)
 
 @st.cache_data
-def carrega_dados_iniciais(_conn, arquivo_parquet='dados_mec.parquet'):
+def carrega_dados_iniciais(_conn, arquivo_parquet='dados_mec.parquet', arquivo_csv='dados_reduzidos_100_mil_linhas.csv'):
     """
-    Carrega os dados do arquivo Parquet para um DataFrame Pandas.
-    Esta função é executada apenas uma vez e o resultado fica em cache.
-    O DataFrame é usado para popular os filtros da sidebar.
+    Tenta carregar dados do arquivo Parquet. Se falhar, tenta carregar do CSV original.
     """
+    df = None
     try:
         df = pd.read_parquet(arquivo_parquet)
+        st.sidebar.info("⚡ Dados carregados rapidamente via Parquet.", icon="✅")
     except FileNotFoundError:
-        st.error(f"Arquivo '{arquivo_parquet}' não encontrado. Por favor, execute o script 'converter_para_parquet.py' primeiro.")
-        return pd.DataFrame()
+        st.sidebar.warning(f"Arquivo '{arquivo_parquet}' não encontrado. Carregando do CSV '{arquivo_csv}'.")
+        try:
+            df = pd.read_csv(arquivo_csv, encoding='utf-8', low_memory=False)
+        except FileNotFoundError:
+            st.error(f"ERRO CRÍTICO: Nenhum arquivo de dados ('{arquivo_parquet}' ou '{arquivo_csv}') foi encontrado. Por favor, adicione os dados ao repositório.")
+            return pd.DataFrame()
 
     # Conversões e Mapeamentos
     cols_numericas = ['CI', 'CI-EaD', 'IGC', 'CC', 'CPC', 'ENADE', 'IDD']
     for col in cols_numericas:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
     
-    df['TP_REDE'] = df['TP_REDE'].map({1: 'Pública', 2: 'Privada'})
-    df['TP_MODALIDADE_ENSINO'] = df['TP_MODALIDADE_ENSINO'].map({1: 'Presencial', 2: 'EAD'})
+    if 'TP_REDE' in df.columns:
+        df['TP_REDE'] = df['TP_REDE'].map({1: 'Pública', 2: 'Privada'})
+    if 'TP_MODALIDADE_ENSINO' in df.columns:
+        df['TP_MODALIDADE_ENSINO'] = df['TP_MODALIDADE_ENSINO'].map({1: 'Presencial', 2: 'EAD'})
     
-    # Registrar o DataFrame como uma tabela no DuckDB para consultas SQL
     _conn.register('mec_data', df)
     return df
 
-# Conexão e carregamento de dados
 conn = get_db_connection()
 df_inicial = carrega_dados_iniciais(conn)
+
+if df_inicial.empty:
+    st.stop() # Interrompe a execução se os dados não foram carregados
 
 # --- BARRA LATERAL DE FILTROS ---
 st.sidebar.title("Filtros")
 
-# Utiliza os valores únicos do dataframe inicial para popular os filtros
 filtro_ue = st.sidebar.multiselect('UF da IES', sorted(df_inicial['SG_UF_IES'].dropna().unique()))
 filtro_municipio = st.sidebar.multiselect('Município do Curso', sorted(df_inicial['NO_MUNICIPIO'].dropna().unique()))
 filtro_cursos = st.sidebar.multiselect('Nome do Curso', sorted(df_inicial['NO_CURSO'].dropna().unique()))
 filtro_org_academia = st.sidebar.multiselect('Instituição de Ensino', sorted(df_inicial['NO_IES'].dropna().unique()))
-filtro_rede = st.sidebar.multiselect('Tipo de Rede', ['Pública', 'Privada'])
-# NOVO FILTRO: Modalidade de Ensino
-filtro_modalidade = st.sidebar.multiselect('Modalidade de Ensino', ['Presencial', 'EAD'])
+filtro_rede = st.sidebar.multiselect('Tipo de Rede', df_inicial['TP_REDE'].dropna().unique())
+filtro_modalidade = st.sidebar.multiselect('Modalidade de Ensino', df_inicial['TP_MODALIDADE_ENSINO'].dropna().unique())
 filtro_situacao = st.sidebar.selectbox('Situação do Curso', ['Todos'] + list(df_inicial['Situação'].dropna().unique()))
 
 def aplica_filtros_sql(conn):
-    """
-    Constrói e executa uma query SQL no DuckDB para aplicar os filtros.
-    Isso é ordens de magnitude mais rápido que usar filtros do Pandas.
-    """
     base_query = "SELECT * FROM mec_data"
-    clauses = ["1=1"]  # Inicia com uma cláusula verdadeira para facilitar a concatenação
+    clauses = []
 
     if filtro_ue:
         clauses.append(f"SG_UF_IES IN {tuple(filtro_ue)}")
@@ -104,13 +105,15 @@ def aplica_filtros_sql(conn):
     if filtro_situacao != 'Todos':
         clauses.append(f"Situação = '{filtro_situacao}'")
 
-    query = f"{base_query} WHERE {' AND '.join(clauses)}"
+    if clauses:
+        query = f"{base_query} WHERE {' AND '.join(clauses)}"
+    else:
+        query = base_query
+        
     return conn.execute(query).fetchdf()
 
-# Chama a função que aplica os filtros em tempo real no dataframe
 df_filtrada = aplica_filtros_sql(conn)
 
-# Função que monta a barra lateral, paginação automática
 def cria_aggrid(df, columns, key, column_config=None):
     gb = GridOptionsBuilder.from_dataframe(df[columns])
     gb.configure_pagination(paginationAutoPageSize=True)
@@ -135,19 +138,12 @@ def cria_aggrid(df, columns, key, column_config=None):
         height=400,
         width='100%',
         key=key,
-        # O parâmetro 'recarrega_dados' não existe mais como 'allow_unsafe_jscode'
-        allow_unsafe_jscode=True # Necessário para algumas funcionalidades avançadas do AgGrid
+        allow_unsafe_jscode=True
     )
-
-# --- VISUALIZAÇÕES ---
 
 st.header("Ranking das IES")
 ies_colunas = ['NO_IES', 'SG_UF_IES', 'NO_MUNICIPIO_IES', 'TP_REDE', 'CI', 'CI-EaD', 'IGC', 'Ano CI', 'Ano CI-EaD', 'Ano IGC']
-if not df_filtrada.empty:
-    ies_df = df_filtrada.drop_duplicates(subset=['CO_IES'])[ies_colunas]
-else:
-    ies_df = pd.DataFrame(columns=ies_colunas)
-
+ies_df = df_filtrada.drop_duplicates(subset=['CO_IES'])[ies_colunas] if not df_filtrada.empty else pd.DataFrame(columns=ies_colunas)
 config_colunas_ies = {
     'NO_IES': {'headerName': 'Nome da Instituição', 'width': 300},
     'SG_UF_IES': {'headerName': 'UF IES', 'width': 100},
@@ -159,7 +155,6 @@ cria_aggrid(ies_df, ies_colunas, 'tabela_ies', config_colunas_ies)
 st.header("Ranking dos Cursos")
 cursos_colunas = ['NO_CURSO', 'NO_IES', 'TP_MODALIDADE_ENSINO', 'NO_MUNICIPIO', 'CC', 'Ano CC', 'CPC', 'ENADE', 'Ano ENADE', 'IDD', 'Situação']
 cursos_df = df_filtrada[cursos_colunas] if not df_filtrada.empty else pd.DataFrame(columns=cursos_colunas)
-
 cursos_colunas_config = {
     'NO_CURSO': {'headerName': 'Nome do Curso', 'width': 300},
     'NO_IES': {'headerName': 'Nome da Instituição', 'width': 250},
