@@ -1,10 +1,13 @@
-# Em app.py e em pages/Analise_Avancada.py
-from shared_functions import get_db_connection, carrega_dados_iniciais, criar_filtros_sidebar, inicializar_session_state, definir_processo_seletivo
-
-# pages/Analise_Avancada.py
-
 import streamlit as st
 import pandas as pd
+from st_aggrid import AgGrid, GridOptionsBuilder
+
+# --- ADICIONE ESTE BLOCO PARA CORRIGIR A IMPORTAÇÃO ---
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# --- FIM DO BLOCO DE CORREÇÃO ---
+
 from shared_functions import criar_filtros_sidebar, inicializar_session_state
 
 st.set_page_config(layout="wide", page_title="Análise Avançada")

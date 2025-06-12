@@ -1,11 +1,15 @@
-# Em app.py e em pages/Analise_Avancada.py
-from shared_functions import get_db_connection, carrega_dados_iniciais, criar_filtros_sidebar, inicializar_session_state, definir_processo_seletivo
-
-# app.py
 import streamlit as st
+import pandas as pd
+import duckdb
 from st_aggrid import AgGrid, GridOptionsBuilder
-from shared_functions import get_db_connection, carrega_dados_iniciais, criar_filtros_sidebar, inicializar_session_state, definir_processo_seletivo
 
+# --- ADICIONE ESTE BLOCO PARA CORRIGIR A IMPORTAÇÃO ---
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# --- FIM DO BLOCO DE CORREÇÃO ---
+
+from shared_functions import get_db_connection, carrega_dados_iniciais, criar_filtros_sidebar, inicializar_session_state, definir_processo_seletivo
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(layout="wide", page_title="Visão Geral - Análise MEC", initial_sidebar_state="expanded")
 
