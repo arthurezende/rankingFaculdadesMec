@@ -1,4 +1,5 @@
 streamlit
-streamlit-aggrid==1.0.5
 pandas
-numpy
+duckdb
+pyarrow
+streamlit-aggrid
