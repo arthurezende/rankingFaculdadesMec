@@ -1,3 +1,6 @@
+# Em app.py e em pages/Analise_Avancada.py
+from shared_functions import get_db_connection, carrega_dados_iniciais, criar_filtros_sidebar, inicializar_session_state, definir_processo_seletivo
+
 # pages/Analise_Avancada.py
 
 import streamlit as st
