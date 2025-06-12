@@ -9,7 +9,8 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # --- FIM DO BLOCO DE CORREÇÃO ---
 
-from shared_functions import get_db_connection, carrega_dados_iniciais, criar_filtros_sidebar, inicializar_session_state, definir_processo_seletivo
+from pages.shared_functions import get_db_connection, carrega_dados_iniciais, criar_filtros_sidebar, inicializar_session_state, definir_processo_seletivo
+
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(layout="wide", page_title="Visão Geral - Análise MEC", initial_sidebar_state="expanded")
 
