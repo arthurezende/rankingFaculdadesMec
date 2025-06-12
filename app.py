@@ -10,7 +10,7 @@ st.set_page_config(layout="wide", page_title="Análise de Dados do MEC", initial
 st.markdown(
     """
     <div style='background-color: #00008B; padding: 10px; color: white; text-align: center;'>
-    <h3>Faculdade Exame - Projeto Extensionista: Análise Educacional e Apoio à Escolha de Cursos com Base nos Dados do INEP</h3>
+    <h3>Faculdade Exame Saint Paul - Projeto Extensionista: Análise Educacional e Apoio à Escolha de Cursos com Base nos Dados do INEP</h3>
     </div>
     """,
     unsafe_allow_html=True
