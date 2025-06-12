@@ -4,7 +4,6 @@ import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder
 
-# Configuração da página (necessária em cada página do multipage app)
 st.set_page_config(layout="wide", page_title="Análise Avançada")
 
 st.markdown(
@@ -17,7 +16,29 @@ st.markdown(
 )
 st.markdown("Gráficos e análises baseados nos filtros selecionados na página principal.")
 
-# Verifica se o dataframe filtrado existe no session_state
+# --- NOVA SEÇÃO: EXIBIR FILTROS ATIVOS ---
+st.subheader("Filtros Ativos")
+if 'filtros_ativos' in st.session_state:
+    filtros_para_mostrar = {k: v for k, v in st.session_state.filtros_ativos.items() if v and (v != 'Todos') and (v != 1)}
+    if not filtros_para_mostrar:
+        st.info("Nenhum filtro avançado aplicado. Mostrando dados gerais.")
+    else:
+        # Exibe os filtros em colunas para uma melhor visualização
+        cols = st.columns(3)
+        col_idx = 0
+        for nome_filtro, valor_filtro in filtros_para_mostrar.items():
+            if isinstance(valor_filtro, list):
+                valor_str = ", ".join(valor_filtro)
+            else:
+                valor_str = str(valor_filtro)
+            cols[col_idx].markdown(f"**{nome_filtro}:** `{valor_str}`")
+            col_idx = (col_idx + 1) % 3
+else:
+    st.info("Nenhum filtro aplicado. Retorne à página principal para selecionar.")
+
+st.divider()
+
+# --- ANÁLISES E GRÁFICOS ---
 if 'df_filtrada' in st.session_state and not st.session_state.df_filtrada.empty:
     df_filtrada = st.session_state.df_filtrada
     
@@ -33,6 +54,7 @@ if 'df_filtrada' in st.session_state and not st.session_state.df_filtrada.empty:
         cursos_por_area = df_filtrada['NO_CINE_AREA_ESPECIFICA'].value_counts().head(15)
         st.bar_chart(cursos_por_area)
 
+    # --- TABELA DE CONCORRÊNCIA (JÁ USA OS DADOS FILTRADOS) ---
     st.subheader("Análise de Concorrência (Candidato/Vaga)")
     st.markdown("Esta tabela mostra a relação entre o número de inscritos e o número de vagas totais. Disponível apenas para cursos presenciais com dados informados.")
     
@@ -50,7 +72,8 @@ if 'df_filtrada' in st.session_state and not st.session_state.df_filtrada.empty:
         gb.configure_column('Candidatos por Vaga', width=150)
         gb.configure_column('QT_INSCRITO_TOTAL', headerName='Inscritos', width=120)
         gb.configure_column('QT_VG_TOTAL', headerName='Vagas', width=100)
-        
+        gb.configure_pagination(paginationAutoPageSize=True)
+
         AgGrid(
             df_concorrencia_view,
             gridOptions=gb.build(),
