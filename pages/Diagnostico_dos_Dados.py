@@ -8,7 +8,7 @@ st.set_page_config(layout="wide", page_title="Diagnóstico dos Dados")
 
 # --- FUNÇÕES ---
 @st.cache_data
-def carregar_dados_brutos(arquivo_csv='dados_reduzidos_100_mil_linhas.csv'):
+def carregar_dados_brutos(arquivo_csv='dados_reduzidos_50_mil_linhas-uf.csv'):
     """Carrega o DataFrame bruto do CSV para análise de qualidade."""
     try:
         df = pd.read_csv(arquivo_csv, encoding='utf-8', low_memory=False)
