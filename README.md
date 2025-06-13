@@ -48,7 +48,7 @@ Uma página técnica para a equipe do projeto e usuários avançados verificarem
 
 ---
 
-## 🚀 Evolução do projeto (melhorias implementadas)
+## Evolução do projeto (melhorias implementadas)
 
 Esta versão representa uma evolução significativa em relação ao protótipo original. As principais melhorias foram:
 
