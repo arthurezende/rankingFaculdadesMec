@@ -12,20 +12,24 @@ def get_db_connection():
     return duckdb.connect(database=':memory:', read_only=False)
 
 @st.cache_data
-def carrega_dados_iniciais(_conn, arquivo_csv='dados_reduzidos_100_mil_linhas.csv'):
+def carrega_dados_iniciais(_conn, arquivo_csv='dados_reduzidos_50_mil_linhas-uf.csv'): # <-- NOME DO ARQUIVO ATUALIZADO AQUI
     try:
-        # Otimização: DuckDB lê o CSV diretamente para economizar RAM
-        _conn.execute(f"CREATE OR REPLACE TABLE mec_data AS SELECT * FROM read_csv_auto('{arquivo_csv}')")
+        query = f"CREATE OR REPLACE TABLE mec_data AS SELECT * FROM read_csv_auto('{arquivo_csv}', ALL_VARCHAR=TRUE)"
+        _conn.execute(query)
         df_inicial = _conn.execute("SELECT * FROM mec_data").fetchdf()
     except Exception as e:
         st.error(f"ERRO CRÍTICO ao carregar dados: {e}")
         st.stop()
 
-    # Processamento otimizado
+    cols_numericas = ['CI', 'CI-EaD', 'IGC', 'CC', 'CPC', 'ENADE', 'IDD', 'QT_VG_TOTAL', 'QT_INSCRITO_TOTAL', 'CO_IES']
+    for col in cols_numericas:
+        if col in df_inicial.columns:
+            df_inicial[col] = pd.to_numeric(df_inicial[col], errors='coerce')
+    
     df_inicial['TP_REDE'] = pd.to_numeric(df_inicial['TP_REDE'], errors='coerce').map({1.0: 'Pública', 2.0: 'Privada'})
     df_inicial['TP_MODALIDADE_ENSINO'] = pd.to_numeric(df_inicial['TP_MODALIDADE_ENSINO'], errors='coerce').map({1.0: 'Presencial', 2.0: 'EAD'})
-    
-    # Criar tabela de IES únicas
+    df_inicial['TP_GRAU_ACADEMICO'] = pd.to_numeric(df_inicial['TP_GRAU_ACADEMICO'], errors='coerce').map({1.0: 'Bacharelado', 2.0: 'Licenciatura', 3.0: 'Tecnológico'})
+
     ies_unicas_df = df_inicial.drop_duplicates(subset=['CO_IES'])[['CO_IES', 'NO_IES', 'SG_UF_IES', 'TP_REDE', 'IGC', 'Ano IGC', 'CI']].copy()
     _conn.register('ies_unicas', ies_unicas_df)
     
@@ -57,15 +61,17 @@ if filtro_org_academia:
     clauses_ies.append(f"NO_IES IN ({','.join(['?']*len(filtro_org_academia))})")
     params_ies.extend(filtro_org_academia)
 if filtro_rede:
-    clauses_ies.append(f"TP_REDE IN ({','.join(['?']*len(filtro_rede))})")
-    params_ies.extend(filtro_rede)
-
+    rede_map_inv = {v: k for k, v in {1: 'Pública', 2: 'Privada'}.items()}
+    clauses_ies.append(f"CAST(TP_REDE AS INTEGER) IN ({','.join(['?']*len(filtro_rede))})")
+    params_ies.extend([rede_map_inv[r] for r in filtro_rede])
 if clauses_ies:
     query_ies += " WHERE " + " AND ".join(clauses_ies)
 ies_df_filtrado = conn.execute(query_ies, params_ies).fetchdf()
+ies_df_filtrado['TP_REDE'] = pd.to_numeric(ies_df_filtrado['TP_REDE'], errors='coerce').map({1.0: 'Pública', 2.0: 'Privada'})
+
 
 codigos_ies_filtradas = ies_df_filtrado['CO_IES'].unique().tolist()
-df_cursos_pre_filtrado = df_inicial[df_inicial['CO_IES'].isin(codigos_ies_filtradas)] if codigos_ies_filtradas else df_inicial
+df_cursos_pre_filtrado = df_inicial[df_inicial['CO_IES'].isin(codigos_ies_filtradas)] if filtro_ue_ies or filtro_org_academia or filtro_rede else df_inicial
 
 cursos_df_filtrado = df_cursos_pre_filtrado.copy()
 if filtro_municipio_curso:
